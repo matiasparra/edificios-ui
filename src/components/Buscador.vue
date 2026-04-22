@@ -2,30 +2,49 @@
   <div>
     <button @click="logout" style="float:right">Salir</button>
 
-    <h2>Buscar edificio</h2>
+    <h2>🔍 Buscar edificio</h2>
 
-    <input v-model="id" placeholder="ID edificio" />
+    <!-- 🔍 input + botón -->
+    <input 
+      v-model="busqueda" 
+      placeholder="Buscar por ID o nombre..."
+      @keyup.enter="buscar"
+    />
     <button @click="buscar">Buscar</button>
+
+    <!-- 📋 resultados -->
+    <div 
+      v-if="resultados.length" 
+      style="border:1px solid #ccc; max-height:150px; overflow:auto; margin-top:5px;"
+    >
+      <div 
+        v-for="e in resultados" 
+        :key="e.id"
+        @click="seleccionarEdificio(e)"
+        style="padding:5px; cursor:pointer;"
+      >
+        {{ e.nombre }} (ID: {{ e.id }})
+      </div>
+    </div>
 
     <p v-if="error" style="color:red">{{ error }}</p>
 
+    <!-- 📦 detalle -->
     <div v-if="edificio">
       <h3>{{ edificio.nombre }}</h3>
       <p>{{ edificio.direccion }}</p>
 
-      <!-- coords originales -->
       <p>
         Lat original: {{ edificio.lat }} | Lng original: {{ edificio.lng }}
       </p>
 
-      <!-- 🗺️ Mapa -->
+      <!-- 🗺️ mapa -->
       <Mapa 
         :lat="nuevaLat" 
         :lng="nuevaLng"
         @update-coords="actualizarCoords"
       />
 
-      <!-- coords nuevas -->
       <p>
         Nueva Lat: {{ nuevaLat }} | Nueva Lng: {{ nuevaLng }}
       </p>
@@ -37,13 +56,15 @@
 
 <script>
 import Mapa from "./Mapa.vue";
+import { apiFetch } from "../services/api";
 
 export default {
   components: { Mapa },
 
   data() {
     return {
-      id: "",
+      busqueda: "",
+      resultados: [],
       edificio: null,
       error: null,
       nuevaLat: null,
@@ -52,54 +73,38 @@ export default {
   },
 
   methods: {
-    getAuthHeaders() {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        this.logout();
-        return {};
-      }
-
-      return {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      };
-    },
-
     async buscar() {
       this.error = null;
+      this.resultados = [];
       this.edificio = null;
 
-      if (!this.id) {
-        this.error = "Ingresá un ID";
+      if (!this.busqueda) {
+        this.error = "Ingresá un valor para buscar";
         return;
       }
 
       try {
-        const res = await fetch(
-          `https://localhost:44365/edificio/${this.id}`,
-          {
-            headers: this.getAuthHeaders()
-          }
+        const res = await apiFetch(
+          `https://localhost:44365/edificio?search=${this.busqueda}`
         );
 
-        if (res.status === 401) {
-          this.logout();
-          return;
+        this.resultados = await res.json();
+
+        if (!this.resultados.length) {
+          this.error = "No se encontraron resultados";
         }
-
-        if (!res.ok) {
-          throw new Error("No encontrado");
-        }
-
-        this.edificio = await res.json();
-
-        this.nuevaLat = this.edificio.lat;
-        this.nuevaLng = this.edificio.lng;
 
       } catch (e) {
         this.error = e.message;
       }
+    },
+
+    seleccionarEdificio(e) {
+      this.edificio = e;
+      this.resultados = [];
+
+      this.nuevaLat = e.lat;
+      this.nuevaLng = e.lng;
     },
 
     actualizarCoords(coords) {
@@ -111,11 +116,10 @@ export default {
       this.error = null;
 
       try {
-        const res = await fetch(
-          `https://localhost:44365/edificio/${this.id}/coordenadas`,
+        const res = await apiFetch(
+          `https://localhost:44365/edificio/${this.edificio.id}/coordenadas`,
           {
             method: "PUT",
-            headers: this.getAuthHeaders(),
             body: JSON.stringify({
               lat: this.nuevaLat,
               lng: this.nuevaLng
@@ -123,32 +127,24 @@ export default {
           }
         );
 
-        if (res.status === 401) {
-          this.logout();
-          return;
-        }
-
-        if (!res.ok) {
-          throw new Error("Error al guardar coordenadas");
-        }
-
         const data = await res.json();
 
         this.edificio.lat = data.lat;
         this.edificio.lng = data.lng;
 
-        alert("Coordenadas guardadas correctamente 🔥");
+        alert("Coordenadas guardadas 🔥");
 
       } catch (e) {
         this.error = e.message;
       }
     },
 
-logout() {
-  if (confirm("¿Seguro que querés salir?")) {
-    this.$emit("logout");
-  }
-}
+    logout() {
+      if (confirm("¿Seguro que querés salir?")) {
+        localStorage.clear();
+        this.$router.push("/login");
+      }
+    }
   }
 };
 </script>

@@ -41,9 +41,14 @@ export default {
           throw new Error("Credenciales inválidas");
         }
 
-        const data = await res.json(); // 👈 si backend devuelve { token }
+        const data = await res.json();
 
-        this.$emit("login-success", data.token);
+        // 🔐 guardar sesión
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+
+        // 🔁 redirigir al home
+        this.$router.push("/");
 
       } catch (e) {
         this.error = e.message;
