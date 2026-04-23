@@ -56,7 +56,7 @@
 
 <script>
 import Mapa from "./Mapa.vue";
-import { apiFetch } from "../services/api";
+import { api } from "../services/api";
 
 export default {
   components: { Mapa },
@@ -84,18 +84,20 @@ export default {
       }
 
       try {
-        const res = await apiFetch(
-          `https://localhost:44365/edificio?search=${this.busqueda}`
-        );
+        const res = await api.get("/edificio", {
+          params: {
+            search: this.busqueda
+          }
+        });
 
-        this.resultados = await res.json();
+        this.resultados = res.data;
 
         if (!this.resultados.length) {
           this.error = "No se encontraron resultados";
         }
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Error buscando edificios";
       }
     },
 
@@ -116,26 +118,21 @@ export default {
       this.error = null;
 
       try {
-        const res = await apiFetch(
-          `https://localhost:44365/edificio/${this.edificio.id}/coordenadas`,
+        const res = await api.put(
+          `/edificio/${this.edificio.id}/coordenadas`,
           {
-            method: "PUT",
-            body: JSON.stringify({
-              lat: this.nuevaLat,
-              lng: this.nuevaLng
-            })
+            lat: this.nuevaLat,
+            lng: this.nuevaLng
           }
         );
 
-        const data = await res.json();
-
-        this.edificio.lat = data.lat;
-        this.edificio.lng = data.lng;
+        this.edificio.lat = res.data.lat;
+        this.edificio.lng = res.data.lng;
 
         alert("Coordenadas guardadas 🔥");
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Error guardando coordenadas";
       }
     },
 

@@ -12,6 +12,8 @@
 </template>
 
 <script>
+import { api } from "../services/api";
+
 export default {
   data() {
     return {
@@ -26,22 +28,12 @@ export default {
       this.error = null;
 
       try {
-        const res = await fetch("https://localhost:44365/auth/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            email: this.email,
-            password: this.password
-          })
+        const res = await api.post("/auth/login", {
+          email: this.email,
+          password: this.password
         });
 
-        if (!res.ok) {
-          throw new Error("Credenciales inválidas");
-        }
-
-        const data = await res.json();
+        const data = res.data;
 
         // 🔐 guardar sesión
         localStorage.setItem("token", data.token);
@@ -51,7 +43,7 @@ export default {
         this.$router.push("/");
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Credenciales inválidas";
       }
     }
   }

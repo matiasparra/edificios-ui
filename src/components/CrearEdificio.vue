@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import { apiFetch } from "../services/api";
+import { api } from "../services/api";
 import Mapa from "./Mapa.vue";
 
 export default {
@@ -124,10 +124,7 @@ export default {
       this.mensaje = null;
 
       try {
-        await apiFetch("https://localhost:44365/edificio", {
-          method: "POST",
-          body: JSON.stringify(this.edificio)
-        });
+        await api.post("/edificio", this.edificio);
 
         this.mensaje = "Edificio creado correctamente 🔥";
 

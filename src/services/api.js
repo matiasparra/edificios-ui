@@ -1,23 +1,33 @@
-export async function apiFetch(url, options = {}) {
+import axios from "axios";
+
+const API_URL = import.meta.env.VITE_API_URL;
+
+export const api = axios.create({
+  baseURL: API_URL
+});
+
+// 🔐 REQUEST: adjuntar token
+api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
 
-  const headers = {
-    "Content-Type": "application/json",
-    ...(token && { Authorization: `Bearer ${token}` }),
-    ...options.headers
-  };
-
-  const res = await fetch(url, {
-    ...options,
-    headers
-  });
-
-  // 🔐 manejo global de sesión
-  if (res.status === 401) {
-    localStorage.clear();
-    window.location.href = "/login";
-    return;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
 
-  return res;
-}
+  return config;
+});
+
+// 🚨 RESPONSE: manejar expiración
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      window.location.href = "/login";
+    }
+
+    return Promise.reject(error);
+  }
+);

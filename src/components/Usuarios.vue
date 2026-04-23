@@ -46,7 +46,7 @@
 </template>
 
 <script>
-import { apiFetch } from "../services/api";
+import { api } from "../services/api";
 
 export default {
   data() {
@@ -77,25 +77,24 @@ export default {
       this.error = null;
 
       try {
-        const res = await apiFetch("https://localhost:44365/auth/users");
-        this.users = await res.json();
+        const res = await api.get("/auth/users");
+        this.users = res.data;
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Error cargando usuarios";
       }
     },
 
     async updateRole(user) {
       try {
-        await apiFetch(`https://localhost:44365/auth/user/${user.id}/role`, {
-          method: "PUT",
-          body: JSON.stringify({ role: user.role })
+        await api.put(`/auth/user/${user.id}/role`, {
+          role: user.role
         });
 
         alert("Rol actualizado");
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Error actualizando rol";
       }
     },
 
@@ -103,23 +102,17 @@ export default {
       if (!confirm("¿Seguro que querés eliminar este usuario?")) return;
 
       try {
-        await apiFetch(`https://localhost:44365/auth/user/${id}`, {
-          method: "DELETE"
-        });
-
+        await api.delete(`/auth/user/${id}`);
         this.loadUsers();
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Error eliminando usuario";
       }
     },
 
     async createUser() {
       try {
-        await apiFetch("https://localhost:44365/auth/register", {
-          method: "POST",
-          body: JSON.stringify(this.newUser)
-        });
+        await api.post("/auth/register", this.newUser);
 
         alert("Usuario creado");
 
@@ -132,7 +125,7 @@ export default {
         this.loadUsers();
 
       } catch (e) {
-        this.error = e.message;
+        this.error = "Error creando usuario";
       }
     }
   },
