@@ -50,6 +50,33 @@
       </p>
 
       <button @click="guardar">Guardar coordenadas</button>
+
+      <hr />
+
+      <!-- 📄 PLANO -->
+      <h3>📄 Plano del edificio</h3>
+
+      <input type="file" @change="onFileChange" accept="application/pdf" />
+
+      <button 
+        @click="subirPlano"
+        :disabled="!archivo || loadingPlano"
+      >
+        {{ loadingPlano ? "Subiendo..." : "Subir plano" }}
+      </button>
+
+      <p v-if="planoUrl">
+        🔗 Plano: 
+        <a :href="planoUrl" target="_blank">Ver PDF</a>
+      </p>
+
+      <p v-if="errorPlano" style="color:red">
+        {{ errorPlano }}
+      </p>
+
+      <p v-if="okPlano" style="color:green">
+        {{ okPlano }}
+      </p>
     </div>
   </div>
 </template>
@@ -67,12 +94,22 @@ export default {
       resultados: [],
       edificio: null,
       error: null,
+
       nuevaLat: null,
-      nuevaLng: null
+      nuevaLng: null,
+
+      // 📄 plano
+      archivo: null,
+      planoUrl: null,
+      errorPlano: null,
+      okPlano: null,
+      loadingPlano: false
     };
   },
 
   methods: {
+
+    /* 🔍 BUSCAR */
     async buscar() {
       this.error = null;
       this.resultados = [];
@@ -96,19 +133,23 @@ export default {
           this.error = "No se encontraron resultados";
         }
 
-      } catch (e) {
+      } catch {
         this.error = "Error buscando edificios";
       }
     },
 
+    /* 🏢 seleccionar */
     seleccionarEdificio(e) {
       this.edificio = e;
       this.resultados = [];
 
       this.nuevaLat = e.lat;
       this.nuevaLng = e.lng;
+
+      this.planoUrl = e.planoUrl || null;
     },
 
+    /* 🗺️ coords */
     actualizarCoords(coords) {
       this.nuevaLat = coords.lat;
       this.nuevaLng = coords.lng;
@@ -131,11 +172,52 @@ export default {
 
         alert("Coordenadas guardadas 🔥");
 
-      } catch (e) {
+      } catch {
         this.error = "Error guardando coordenadas";
       }
     },
 
+    /* 📄 FILE */
+    onFileChange(e) {
+      this.archivo = e.target.files[0];
+    },
+
+    /* ☁️ SUBIR PLANO */
+    async subirPlano() {
+      this.errorPlano = null;
+      this.okPlano = null;
+      this.loadingPlano = true;
+
+      try {
+        if (!this.archivo) {
+          this.errorPlano = "Seleccioná un PDF";
+          return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", this.archivo);
+
+        const res = await api.post(
+          `/edificio/${this.edificio.id}/plano`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data"
+            }
+          }
+        );
+
+        this.planoUrl = res.data.url;
+        this.okPlano = "Plano subido correctamente 🔥";
+
+      } catch {
+        this.errorPlano = "Error subiendo plano";
+      } finally {
+        this.loadingPlano = false;
+      }
+    },
+
+    /* 🚪 logout */
     logout() {
       if (confirm("¿Seguro que querés salir?")) {
         localStorage.clear();
